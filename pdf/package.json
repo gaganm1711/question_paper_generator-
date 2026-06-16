@@ -1,0 +1,9 @@
+{
+  "name": "qpg-pdf-service",
+  "version": "1.0.0",
+  "description": "Puppeteer A4 PDF renderer for exam papers",
+  "main": "render_pdf.js",
+  "dependencies": {
+    "puppeteer": "^22.10.0"
+  }
+}
