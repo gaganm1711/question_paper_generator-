@@ -5,34 +5,41 @@ from backend.app.config.settings import settings
 from backend.app.database.connection import engine, Base
 from backend.app.routes import auth, academic, questions, papers
 
-# Automatically create tables in the database (SQLite or Postgres)
-# In production, alembic migrations are preferred, but this guarantees a zero-config setup.
-print("Initializing database tables...")
-if not engine.url.drivername.startswith("sqlite"):
-    from sqlalchemy import text
-    try:
-        with engine.begin() as conn:
-            print("Enabling pgvector extension if not exists...")
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-            print("pgvector extension check complete.")
-    except Exception as ddl_err:
-        print(f"Warning: Could not auto-create vector extension: {ddl_err}")
-
-Base.metadata.create_all(bind=engine)
-print("Database tables initialized.")
-
-# Auto-seed academic syllabus structure & sample questions on startup
+import sys
+import threading
 from backend.app.database.connection import SessionLocal
-from backend.app.utils.seeder import seed_questions
-db = SessionLocal()
-try:
-    print("Auto-seeding syllabus structure and questions for all subjects...")
-    seed_questions(db)
-    print("Syllabus structure and questions successfully seeded.")
-except Exception as e:
-    print(f"Error seeding database structure: {e}")
-finally:
-    db.close()
+
+def init_db_and_seed():
+    print("Async database initialization started...", flush=True)
+    db = SessionLocal()
+    try:
+        if not engine.url.drivername.startswith("sqlite"):
+            from sqlalchemy import text
+            try:
+                with engine.begin() as conn:
+                    print("Enabling pgvector extension if not exists...", flush=True)
+                    conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                    print("pgvector extension check complete.", flush=True)
+            except Exception as ddl_err:
+                print(f"Warning: Could not auto-create vector extension: {ddl_err}", flush=True)
+
+        print("Creating database tables...", flush=True)
+        Base.metadata.create_all(bind=engine)
+        print("Database tables initialized.", flush=True)
+
+        # Auto-seed academic syllabus structure & sample questions
+        from backend.app.utils.seeder import seed_questions
+        print("Auto-seeding syllabus structure and questions...", flush=True)
+        seed_questions(db)
+        print("Syllabus structure and questions successfully seeded.", flush=True)
+    except Exception as e:
+        print(f"Error initializing/seeding database: {e}", flush=True)
+    finally:
+        db.close()
+
+# Start initialization in background so server can bind to port immediately
+print("Launching async database initialization thread...", flush=True)
+threading.Thread(target=init_db_and_seed, daemon=True).start()
 
 
 
