@@ -8,6 +8,16 @@ from backend.app.routes import auth, academic, questions, papers
 # Automatically create tables in the database (SQLite or Postgres)
 # In production, alembic migrations are preferred, but this guarantees a zero-config setup.
 print("Initializing database tables...")
+if not engine.url.drivername.startswith("sqlite"):
+    from sqlalchemy import text
+    try:
+        with engine.begin() as conn:
+            print("Enabling pgvector extension if not exists...")
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            print("pgvector extension check complete.")
+    except Exception as ddl_err:
+        print(f"Warning: Could not auto-create vector extension: {ddl_err}")
+
 Base.metadata.create_all(bind=engine)
 print("Database tables initialized.")
 
