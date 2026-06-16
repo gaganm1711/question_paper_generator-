@@ -11,10 +11,15 @@ IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
 # Configure database engine arguments
 connect_args = {}
+engine_kwargs = {}
 if IS_SQLITE:
     connect_args = {"check_same_thread": False}
+else:
+    from sqlalchemy.pool import NullPool
+    engine_kwargs["poolclass"] = NullPool
+    engine_kwargs["pool_pre_ping"] = True
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+engine = create_engine(DATABASE_URL, connect_args=connect_args, **engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
